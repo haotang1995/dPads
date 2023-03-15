@@ -14,7 +14,7 @@ from algorithms import NAS
 from eval_test import test_set_eval
 from program_graph import ProgramGraph
 from utils.data_loader import CustomLoader
-from utils.evaluation import label_correctness, neg_mse_loss
+from utils.evaluation import label_correctness, mse_loss
 from utils.logging import init_logging, log_and_print, print_program
 from utils.loss import SoftF1LossWithLogits
 
@@ -149,6 +149,7 @@ def parse_args():
 
 if __name__ == '__main__':
     args = parse_args()
+    print(args)
 
     if 'crim13' in args.exp_name:
         print('crim13 experiment')
@@ -315,7 +316,7 @@ if __name__ == '__main__':
             'arch_optim' : optim.Adam,
             'model_optim' : optim.Adam,
             'lossfxn' : lossfxn,
-            'evalfxn' : neg_mse_loss,
+            'evalfxn' : mse_loss,
             'num_labels' : args.num_labels,
             'save_path' : save_path,
             'topN' : args.topN_select,
@@ -323,8 +324,10 @@ if __name__ == '__main__':
             'model_weight_decay' : 0,
             'secorder' : args.sec_order,
             'penalty' : args.penalty,
-            'specific' : [[None, 2, 0.001, 8], [4, 2, 0.001, 3], [3, 2, 0.001, 3], [2, 2, 0.001, 3], \
-                    [None, 4, 0.001, 5], [4, 4, 0.001, 3], [3,4, 0.001, 3], [2, 4, 0.001, 0], ["astar", 4, 0.001, args.neural_epochs]]
+            # 'specific' : [[None, 2, 0.001, 20000], [4, 2, 0.001, 5000], [3, 2, 0.001, 5000], [2, 2, 0.001, 5000], \
+                    # [None, 4, 0.001, 20000], [4, 4, 0.001, 5000], [3,4, 0.001, 5000], [2, 4, 0.001, 0], ["astar", 4, 0.001, args.neural_epochs]]
+            'specific' : [[None, 2, 0.001, 200], [4, 2, 0.001, 50], [3, 2, 0.001, 50], [2, 2, 0.001, 50], \
+                    [None, 4, 0.001, 200], [4, 4, 0.001, 50], [3,4, 0.001, 50], [2, 4, 0.001, 0], ["astar", 4, 0.001, args.neural_epochs]]
         }
     # sk152
     elif 'sk152' in args.exp_name:

@@ -11,24 +11,13 @@ class SqueezeList(LibraryFunction):
         assert seq_len == 1
         return batch[:,0,:] # squeeze
 
-class FeatureSelectionFunction(LibraryFunction):
-    def __init__(self, input_size, output_size, num_units, name="FeatureSelection"):
-        assert hasattr(self, "full_feature_dim")
-        assert input_size >= self.full_feature_dim
-        if self.full_feature_dim == 0:
-            self.is_full = True
-            self.full_feature_dim = input_size
-        else:
-            self.is_full = False
-        additional_inputs = input_size - self.full_feature_dim
+SHARED_LINEAR_LAYERS = {
+    (3, 1, True): nn.Linear(3, 1, bias=True).to(device),
+    (3, 3, True): nn.Linear(3, 3, bias=True).to(device),
+    (1, 1, True): nn.Linear(1, 1, bias=True).to(device),
+}
 
-        assert hasattr(self, "feature_tensor")
-        assert len(self.feature_tensor) <= input_size
-        assert output_size == self.feature_tensor.size()[-1]+additional_inputs
-        self.feature_tensor = self.feature_tensor.to(device)
-        self.selected_input_size = self.feature_tensor.size()[-1]+additional_inputs
-        super().__init__({}, "atom", "atom", input_size, output_size, num_units, name, has_params=True,)
-
+class FeatureSelectionFunction(AffineFeatureSelectionFunction):
     def init_params(self):
         self.raw_input_size = self.input_size
         if self.is_full:
@@ -37,17 +26,11 @@ class FeatureSelectionFunction(LibraryFunction):
 
         additional_inputs = self.raw_input_size - self.full_feature_dim
         self.selected_input_size = self.feature_tensor.size()[-1] + additional_inputs
-        self.linear_layer = nn.Linear(self.selected_input_size, self.output_size, bias=True).to(device)
+        self.linear_layer = SHARED_LINEAR_LAYERS[(self.selected_input_size, self.output_size, True)]
         self.parameters = {
-            "weights" : self.linear_layer.weight,
-            "bias" : self.linear_layer.bias
+            f"shared_weights_{self.selected_input_size}_{self.output_size}" : self.linear_layer.weight,
+            f"shared_bias_{self.selected_input_size}_{self.output_size}" : self.linear_layer.bias
         }
-
-    def execute_on_batch(self, batch, batch_lens=None):
-        assert len(batch.size()) == 2
-        features = torch.index_select(batch, 1, self.feature_tensor)
-        remaining_features = batch[:,self.full_feature_dim:]
-        return torch.cat([features, remaining_features], dim=-1)
 
 ARITH_FEATURE_SUBSETS = {
     'X': torch.LongTensor([0]),

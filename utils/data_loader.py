@@ -62,6 +62,7 @@ class CustomLoader:
     # prepare train, validation and test dataset
     def prepare_datasets(self, train_data, valid_data, test_data, train_labels, valid_labels, test_labels, normalize, train_valid_split, by_label):
         if normalize:
+            assert(False)
             try:
                 train_data, valid_data, test_data = self.normalize_data(train_data, valid_data, test_data)
             except:
@@ -109,7 +110,7 @@ class CustomLoader:
             for t in range(len(traj)):
                 traj_list.append(traj[t])
 
-            label = torch.tensor(labels[k]).long()
+            label = torch.tensor(labels[k])
             dataset.append([traj_list, label])
 
         return dataset

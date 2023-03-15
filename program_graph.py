@@ -471,6 +471,7 @@ class ProgramGraph(nn.Module):
             return None
 
         # search edges and get parameters
+        visited_shared_keys = []
         model_params = []
         param_nums = 0
         queue = [self.root_node]
@@ -488,8 +489,14 @@ class ProgramGraph(nn.Module):
                     param_nums += sum([param.view(-1).shape[0] for param in list(prog.model.parameters())])
                 # params of program
                 elif prog.has_params:
-                    for param in prog.parameters.values():
-                        model_params.append({'params' : param})
+                    for key, param in prog.parameters.items():
+                        if 'shared' in key:
+                            if key not in visited_shared_keys:
+                                model_params.append({'params' : param})
+                                print('lalala', key, param)
+                                visited_shared_keys.append(key)
+                        else:
+                            model_params.append({'params' : param})
                     # model_params.append({'params': list(prog.parameters.values())})
                     param_nums += sum([param.view(-1).shape[0] for param in list(prog.parameters.values())])
                 # edge
@@ -564,7 +571,7 @@ class ProgramGraph(nn.Module):
                         new_progs = self.construct_candidates(sub_prog.input_type, sub_prog.output_type, \
                                                             sub_prog.input_size, sub_prog.output_size, \
                                                             self.num_units_at_depth(depth))
-                        print('www', sub_prog, sub_prog.input_type, sub_prog.output_type, sub_prog.input_size, sub_prog.output_size, self.num_units_at_depth(depth), len(new_progs))
+                        print('www', sub_prog, sub_prog.input_type, sub_prog.output_type, sub_prog.input_size, sub_prog.output_size, self.num_units_at_depth(depth), len(new_progs), self.max_num_units, self.min_num_units,)
                         # if reach max depth, program should terminate
                         if depth == self.max_depth:
                             new_leaf_progs = [prog for prog in new_progs if len(prog.get_submodules()) == 0]

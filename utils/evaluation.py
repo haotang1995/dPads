@@ -4,6 +4,7 @@ from sklearn.metrics import hamming_loss, f1_score
 def compute_average_f1_score(predicted, truth, num_labels):
     assert isinstance(predicted, torch.Tensor)
     assert isinstance(truth, torch.Tensor)
+    truth = truth.long()
 
     if num_labels > 1:
         weighted_avg_f1 = f1_score(truth, predicted, average='weighted')
@@ -17,6 +18,7 @@ def compute_average_f1_score(predicted, truth, num_labels):
 
 def label_correctness(predictions, truths, num_labels=1, threshold=0.5):
     #counts up hamming distance and true accuracy
+    truths = truths.long()
     additional_scores = {}
     if len(predictions.size()) == 1:
         predictions = torch.sigmoid(predictions) > threshold
@@ -32,5 +34,5 @@ def label_correctness(predictions, truths, num_labels=1, threshold=0.5):
         w_avg_f1, additional_scores['all_f1s'] = compute_average_f1_score(truths.squeeze().cpu(), predictions.squeeze().cpu(), num_labels)
         return 1 - w_avg_f1, additional_scores
 
-def neg_mse_loss(predictions, truths, num_labels=1,):
-    return -F.mse_loss(predictions, truths,), dict()
+def mse_loss(predictions, truths, num_labels=1,):
+    return F.mse_loss(predictions, truths,), dict()

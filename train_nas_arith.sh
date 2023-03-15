@@ -20,15 +20,16 @@ train_arith_first_order(){
     --learning_rate 0.001 \
     --search_learning_rate 0.001 \
     --train_valid_split 0.6 \
-    --symbolic_epochs 6 \
-    --neural_epochs 6 \
+    --symbolic_epochs 2000 \
+    --neural_epochs 2000 \
     --cell_depth 2 \
     --batch_size 200 \
     --penalty 0.01 \
-    --finetune_epoch 6 \
+    --finetune_epoch 2000 \
     --finetune_lr 0.001 \
     --node_share \
     --random_seed 1000 \
+    --max_num_units 1024 \
     --graph_unfold
     #--class_weights "1.0,1.5" \
 }

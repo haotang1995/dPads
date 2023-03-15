@@ -53,22 +53,27 @@ class NAS(ProgramLearningAlgorithm):
         best_model = None
         best_loss = None
         best_epoch = None
-        for epoch in tqdm(range(num_epoches)):
+        early_stop_cnt = 0
+        EARLY_STOP_TOLERANCE = 2 * max(num_epoches//10, 1)
+        # for epoch in tqdm(range(num_epoches)):
+        for epoch in (range(num_epoches)):
             # store
-            log_and_print('------------------------')
-            log_and_print('training epoch: {}'.format(epoch))
+            if epoch % max(num_epoches//10, 1) == 0:
+                log_and_print('------------------------')
+                log_and_print('training epoch: {}'.format(epoch))
             loss_store = {'valid_loss':[], 'model_loss':[]}
 
             # get new train set
             trainset = train_loader.get_batch_trainset()
-            for batchidx in tqdm(range(len(trainset))):
+            # for batchidx in tqdm(range(len(trainset))):
+            for batchidx in (range(len(trainset))):
                 # update model parameters
                 # prepare train data
                 batch_input, batch_output = map(list, zip(*trainset[batchidx]))
                 true_vals = torch.tensor(flatten_batch(batch_output)).float().to(device)
-                # TODO a little hacky, but easiest solution for now
-                if isinstance(lossfxn, nn.CrossEntropyLoss):
-                    true_vals = true_vals.long()
+                # # TODO a little hacky, but easiest solution for now
+                # if isinstance(lossfxn, nn.CrossEntropyLoss):
+                    # true_vals = true_vals.long()
 
                 # pass through graph
                 train_predicted = graph.execute_graph(batch_input, output_type, output_size, device, clear_temp=False, cur_arch_train=True)
@@ -90,6 +95,8 @@ class NAS(ProgramLearningAlgorithm):
                     true_indxs = indxs.unsqueeze(1).repeat(1, len(batch_input[0])).view(-1)
                     valid_batch_input = [batch_input[idx_num] for idx_num, idx in enumerate(indxs) if idx]
                     train_predicted = graph.execute_graph(valid_batch_input, output_type, output_size, device, clear_temp=False, cur_arch_train=True)
+                    print('hhh', true_vals)
+                    assert(False)
                     loss = lossfxn(train_predicted, true_vals[true_indxs])
                     # graph.clear_graph_results()
                     model_optim.zero_grad()
@@ -106,8 +113,9 @@ class NAS(ProgramLearningAlgorithm):
                 metric = self.eval_graph(graph, validset, train_config['evalfxn'], train_config['num_labels'], device)
 
             # log
-            log_and_print('model loss: {}'.format(np.mean(loss_store['model_loss'])))
-            log_and_print('validation metric: {}'.format(metric))
+            if epoch % max(num_epoches//10, 1) == 0:
+                log_and_print('model loss: {}'.format(np.mean(loss_store['model_loss'])))
+                log_and_print('validation metric: {}'.format(metric))
 
             if best_model is None:
                 best_loss = metric
@@ -117,6 +125,11 @@ class NAS(ProgramLearningAlgorithm):
                 best_loss = metric
                 best_model = copy.deepcopy(graph)
                 best_epoch = epoch
+                early_stop_cnt = 0
+            else:
+                early_stop_cnt += 1
+                if early_stop_cnt >= EARLY_STOP_TOLERANCE:
+                    break;
 
         log_and_print('finish train\n')
         log_and_print('best epoch: {}'.format(best_epoch))
@@ -125,7 +138,7 @@ class NAS(ProgramLearningAlgorithm):
 
 
     # train the model
-    def train_graph_search(self, graph, search_loader, train_config, device, valid=False, lr_decay=1.0, warmup=False, get_best=False):
+    def train_graph_search(self, graph, search_loader, train_config, device, valid=False, lr_decay=1.0, warmup=False, get_best=False,):
         # get train arguments
         arch_lr = train_config['arch_lr'] * lr_decay
         model_lr = train_config['model_lr'] * lr_decay
@@ -160,12 +173,16 @@ class NAS(ProgramLearningAlgorithm):
         best_metric = 10
         best_graph = copy.deepcopy(graph)
         cur_valid_id = 0
+        early_stop_cnt = 0
+        EARLY_STOP_TOLERANCE = 2 * max(num_epoches//10, 1)
         validset = search_loader.get_batch_validset()
         # start train
-        for epoch in tqdm(range(num_epoches)):
+        # for epoch in tqdm(range(num_epoches)):
+        for epoch in (range(num_epoches)):
             # store
-            log_and_print('------------------------')
-            log_and_print('training epoch: {}'.format(epoch))
+            if epoch % max(num_epoches//10, 1) == 0:
+                log_and_print('------------------------')
+                log_and_print('training epoch: {}'.format(epoch))
             loss_store = {'arch_loss':[], 'model_loss':[], 'valid_loss':[]}
 
             # store graph for debug
@@ -175,7 +192,8 @@ class NAS(ProgramLearningAlgorithm):
             trainset = search_loader.get_batch_trainset()
 
             # train and search
-            for batchidx in tqdm(range(len(trainset))):
+            # for batchidx in tqdm(range(len(trainset))):
+            for batchidx in (range(len(trainset))):
                 #########################################
                 # update architecture parameters first  #
                 #########################################
@@ -190,16 +208,16 @@ class NAS(ProgramLearningAlgorithm):
                     validation_input, validation_output = map(list, zip(*validset[cur_valid_id]))
                     cur_valid_id += 1
                     validation_true_vals = torch.tensor(flatten_batch(validation_output)).float().to(device)
-                    # TODO a little hacky, but easiest solution for now
-                    if isinstance(lossfxn, nn.CrossEntropyLoss):
-                        validation_true_vals = validation_true_vals.long()
+                    # # TODO a little hacky, but easiest solution for now
+                    # if isinstance(lossfxn, nn.CrossEntropyLoss):
+                        # validation_true_vals = validation_true_vals.long()
 
                 # prepare train data
                 batch_input, batch_output = map(list, zip(*trainset[batchidx]))
                 true_vals = torch.tensor(flatten_batch(batch_output)).float().to(device)
-                # TODO a little hacky, but easiest solution for now
-                if isinstance(lossfxn, nn.CrossEntropyLoss):
-                    true_vals = true_vals.long()
+                # # TODO a little hacky, but easiest solution for now
+                # if isinstance(lossfxn, nn.CrossEntropyLoss):
+                    # true_vals = true_vals.long()
 
                 if not second_order and not warmup:
                     ratio = None
@@ -226,6 +244,8 @@ class NAS(ProgramLearningAlgorithm):
                     # test loss
                     with torch.no_grad():
                         valid_predicted = graph.execute_graph(validation_input, output_type, output_size, device, clear_temp=True, cur_arch_train=True)
+                        print('hhh', validation_true_vals)
+                        assert(False)
                         loss = lossfxn(valid_predicted, validation_true_vals)
 
                 # store
@@ -252,17 +272,25 @@ class NAS(ProgramLearningAlgorithm):
                 loss_store['model_loss'].append(loss.cpu().data.item())
 
             # log
-            log_and_print('architecture loss: {}'.format(np.mean(loss_store['arch_loss'])))
-            log_and_print('model loss: {}'.format(np.mean(loss_store['model_loss'])))
+            if epoch % max(num_epoches//10, 1) == 0:
+                log_and_print('architecture loss: {}'.format(np.mean(loss_store['arch_loss'])))
+                log_and_print('model loss: {}'.format(np.mean(loss_store['model_loss'])))
 
             # evaluate
             if valid:
                 with torch.no_grad():
                     validset_total = search_loader.validset
                     metric = self.eval_graph(graph, validset_total, train_config['evalfxn'], train_config['num_labels'], device)
+                    if epoch % max(num_epoches//10, 1) == 0:
+                        log_and_print('metric: {}'.format(metric))
                     if metric < best_metric:
                         best_metric = metric
                         best_graph = copy.deepcopy(graph)
+                        early_stop_cnt = 0
+                    else:
+                        early_stop_cnt += 1
+                        if early_stop_cnt >= EARLY_STOP_TOLERANCE:
+                            break;
 
         if get_best:
             return best_graph
@@ -288,6 +316,11 @@ class NAS(ProgramLearningAlgorithm):
             loss += manual_loss
 
         loss.backward()
+        # for p in graph.get_model_params()[0]:
+            # p = list(p.values())[0]
+            # if p.shape == (1,1,):
+                # print('muamua', p, p.grad)
+                # assert(p.grad is not None)
         early_cut = loss.cpu().item() != loss.cpu().item() or loss.cpu().item() > 100
         if clip:
             assert clip_params is not None
@@ -317,6 +350,8 @@ class NAS(ProgramLearningAlgorithm):
                     optim.zero_grad()
 
             predicted_data = graph.execute_graph(batch_data, output_type, output_size, device, clear_temp=False, cur_arch_train=cur_arch_train)
+            print('hhh', predicted_data, label_data)
+            assert(False)
             loss = lossfxn(predicted_data, label_data)
             if ratio is not None:
                 loss = ratio * loss
@@ -509,7 +544,7 @@ class NAS(ProgramLearningAlgorithm):
         # prepare test data
         test_input, test_output = map(list, zip(*test_set))
         test_true_vals = torch.tensor(flatten_batch(test_output)).float().to(device)
-        test_true_vals = test_true_vals.long()
+        test_true_vals = test_true_vals
         # evaluation
         with torch.no_grad():
             # pass through graph
@@ -517,10 +552,10 @@ class NAS(ProgramLearningAlgorithm):
             metric, additional_params = eval_fun(test_predicted, test_true_vals, num_labels=num_labels)
 
         # accuracy
-        log_and_print("Validation score is: {:.4f}".format(metric))
-        log_and_print("Average f1-score is: {:.4f}".format(1 - metric))
-        if 'hamming_accuracy' in additional_params:
-            log_and_print("Hamming accuracy is: {:.4f}".format(additional_params['hamming_accuracy']))
+        # log_and_print("Validation score is: {:.4f}".format(metric))
+        # log_and_print("Average f1-score is: {:.4f}".format(1 - metric))
+        # if 'hamming_accuracy' in additional_params:
+            # log_and_print("Hamming accuracy is: {:.4f}".format(additional_params['hamming_accuracy']))
 
         return metric
 
@@ -610,6 +645,7 @@ class NAS(ProgramLearningAlgorithm):
             for child_id, child_graph in enumerate(children):
                 # debug
                 child_graph.show_graph()
+                # print_program(child_graph.extract_program())
                 terminate = child_graph.check_terminate(child_graph, child_depth)
                 # train
                 if terminate:
