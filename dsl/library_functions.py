@@ -46,7 +46,7 @@ class StartFunction(LibraryFunction):
 
     def execute_on_batch(self, batch, batch_lens=None, batch_output=None, is_sequential=False):
         return self.submodules["program"].execute_on_batch(batch, batch_lens)
-            
+
 
 class FoldFunction(LibraryFunction):
 
@@ -93,7 +93,7 @@ class FoldFunction(LibraryFunction):
             fold_out.append(out_val.unsqueeze(1))
             folded_val = out_val
         fold_out = torch.cat(fold_out, dim=1)
-        
+
         return fold_out
 
 
@@ -165,14 +165,14 @@ class ITE(LibraryFunction):
         gate = self.bsmooth(predicted_eval*self.beta)
         if self.simple:
             gate = gate.repeat(1, self.output_size)
-                
+
         if self.get_typesignature() == ('list', 'list'):
             gate = gate.unsqueeze(1).repeat(1, batch.size(1), 1)
         elif self.get_typesignature() == ('list', 'atom') and is_sequential:
             gate = gate.unsqueeze(1).repeat(1, batch.size(1), 1)
 
         assert gate.size() == predicted_function2.size() == predicted_function1.size()
-        
+
         ite_result = gate*predicted_function1 + (1.0 - gate)*predicted_function2
 
         return ite_result
@@ -182,9 +182,9 @@ class SimpleITE(ITE):
     """The simple version of ITE evaluates one function for all dimensions of the output."""
 
     def __init__(self, input_type, output_type, input_size, output_size, num_units, eval_function=None, function1=None, function2=None, beta=1.0):
-        super().__init__(input_type, output_type, input_size, output_size, num_units, 
+        super().__init__(input_type, output_type, input_size, output_size, num_units,
             eval_function=eval_function, function1=function1, function2=function2, beta=beta, name="SimpleITE", simple=True)
-        
+
 
 class MultiplyFunction(LibraryFunction):
 
@@ -202,6 +202,22 @@ class MultiplyFunction(LibraryFunction):
         predicted_function2 = self.submodules["function2"].execute_on_batch(batch)
         return predicted_function1 * predicted_function2
 
+
+class SubFunction(LibraryFunction):
+
+    def __init__(self, input_size, output_size, num_units, function1=None, function2=None):
+        if function1 is None:
+            function1 = init_neural_function("atom", "atom", input_size, output_size, num_units)
+        if function2 is None:
+            function2 = init_neural_function("atom", "atom", input_size, output_size, num_units)
+        submodules = { "function1": function1, "function2": function2 }
+        super().__init__(submodules, "atom", "atom", input_size, output_size, num_units, name="Sub")
+
+    def execute_on_batch(self, batch, batch_lens=None):
+        assert len(batch.size()) == 2
+        predicted_function1 = self.submodules["function1"].execute_on_batch(batch)
+        predicted_function2 = self.submodules["function2"].execute_on_batch(batch)
+        return predicted_function1 - predicted_function2
 
 class AddFunction(LibraryFunction):
 
@@ -245,7 +261,7 @@ class LearnedConstantFunction(LibraryFunction):
     def execute_on_batch(self, batch, batch_lens=None):
         return self.parameters["constant"].unsqueeze(0).repeat(batch.size(0), 1)
 
-        
+
 class AffineFunction(LibraryFunction):
 
     def __init__(self, raw_input_size, selected_input_size, output_size, num_units, name="Affine"):
@@ -280,7 +296,7 @@ class AffineFeatureSelectionFunction(AffineFunction):
         assert hasattr(self, "feature_tensor")
         assert len(self.feature_tensor) <= input_size
         self.feature_tensor = self.feature_tensor.to(device)
-        super().__init__(raw_input_size=input_size, selected_input_size=self.feature_tensor.size()[-1]+additional_inputs, 
+        super().__init__(raw_input_size=input_size, selected_input_size=self.feature_tensor.size()[-1]+additional_inputs,
             output_size=output_size, num_units=num_units, name=name)
 
     def init_params(self):

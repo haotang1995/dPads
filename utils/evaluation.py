@@ -1,4 +1,4 @@
-import torch
+import torch, torch.nn.functional as F
 from sklearn.metrics import hamming_loss, f1_score
 
 def compute_average_f1_score(predicted, truth, num_labels):
@@ -31,3 +31,6 @@ def label_correctness(predictions, truths, num_labels=1, threshold=0.5):
     else:
         w_avg_f1, additional_scores['all_f1s'] = compute_average_f1_score(truths.squeeze().cpu(), predictions.squeeze().cpu(), num_labels)
         return 1 - w_avg_f1, additional_scores
+
+def neg_mse_loss(predictions, truths, num_labels=1,):
+    return -F.mse_loss(predictions, truths,), dict()

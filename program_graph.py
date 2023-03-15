@@ -27,14 +27,14 @@ class Edge(nn.Module):
         self.randset = randset
 
     def init_w(self, device):
-        weights = torch.zeros(len(self.to_node.prog_dict[self.type_sign]), 
+        weights = torch.zeros(len(self.to_node.prog_dict[self.type_sign]),
                         requires_grad = False,
                         dtype = torch.float,
                         device = device)
         weights.requires_grad = True
-        weight_ids = torch.ones(len(self.to_node.prog_dict[self.type_sign]), 
-                                requires_grad = False, 
-                                dtype=torch.long, 
+        weight_ids = torch.ones(len(self.to_node.prog_dict[self.type_sign]),
+                                requires_grad = False,
+                                dtype=torch.long,
                                 device=device)
         return weights, weight_ids
 
@@ -199,7 +199,7 @@ class Edge(nn.Module):
         # no iterative operation
         valid_pos = [p_id.item() for p_id in torch.where(self.W_id==1)[0]]
         if not isfold:
-            results = self.to_node.execute_on_batch(self.type_sign, valid_pos, **pass_dict) 
+            results = self.to_node.execute_on_batch(self.type_sign, valid_pos, **pass_dict)
             # plus weight
             global arch_search
             rand_prob = random.uniform(0, 1)
@@ -207,7 +207,7 @@ class Edge(nn.Module):
                 Ws = self.softmax(self.W[self.W_id==1])
             else:
                 Ws = self.softmax(torch.ones_like(self.W)[self.W_id==1])
-                
+
             for shape_id in range(len(results.shape)-1):
                 Ws = Ws.unsqueeze(-1)
             results = torch.sum(Ws * results, dim=0).contiguous()
@@ -217,7 +217,7 @@ class Edge(nn.Module):
             assert foldaccumulator is not None
             results = self.execute_fold_function(batch, foldaccumulator)
             return results
-    
+
 
     def execute_fold_function(self, batch, accumulator):
         batch_size, seq_len, feature_dim = batch.size()
@@ -270,7 +270,7 @@ class ProgramNode(nn.Module):
         self.depth = depth
         self.temp_results = {}
         self.temp_input = {}
-    
+
     def extend_sign(self, new_type_sign, new_programs):
         assert new_type_sign not in self.prog_dict
         self.prog_dict[new_type_sign] = new_programs
@@ -384,7 +384,7 @@ class ProgramNode(nn.Module):
         programs = []
         for type_sign in type_sign_list:
             programs = programs + self.prog_dict[type_sign]
-        
+
         return programs
 
     # get structure cost
@@ -400,8 +400,8 @@ class ProgramNode(nn.Module):
 
 # program graph for dPads
 class ProgramGraph(nn.Module):
-    
-    def __init__(self, dsl_dict, input_type, output_type, input_size, output_size, 
+
+    def __init__(self, dsl_dict, input_type, output_type, input_size, output_size,
                 max_num_units, min_num_units, max_depth, device, ite_beta=1.0):
         super(ProgramGraph, self).__init__()
 
@@ -427,8 +427,8 @@ class ProgramGraph(nn.Module):
         self.init_root_node(input_type, output_type, input_size, output_size)
 
     def init_root_node(self, input_type, output_type, input_size, output_size):
-        root_fun = dsl.StartFunction(input_type=input_type, output_type=output_type, 
-                                     input_size=input_size, output_size=output_size, 
+        root_fun = dsl.StartFunction(input_type=input_type, output_type=output_type,
+                                     input_size=input_size, output_size=output_size,
                                      num_units=self.max_num_units)
         self.root_node = ProgramNode([root_fun], 0, type_sign=(input_type, output_type, input_size, output_size))
 
@@ -469,7 +469,7 @@ class ProgramGraph(nn.Module):
     def get_model_params(self):
         if self.root_node is None:
             return None
-        
+
         # search edges and get parameters
         model_params = []
         param_nums = 0
@@ -522,7 +522,10 @@ class ProgramGraph(nn.Module):
 
     def construct_candidates(self, input_type, output_type, input_size, output_size, num_units):
         candidates = []
-        replacement_candidates = self.dsl_dict[(input_type, output_type)]
+        if (input_type, output_type) in self.dsl_dict:
+            replacement_candidates = self.dsl_dict[(input_type, output_type)]
+        else:
+            replacement_candidates = self.dsl_dict[(input_type, output_type, input_size, output_size,)]
         for functionclass in replacement_candidates:
             if issubclass(functionclass, dsl.ITE):
                 candidate = functionclass(input_type, output_type, input_size, output_size, num_units, beta=self.ite_beta)
@@ -561,6 +564,7 @@ class ProgramGraph(nn.Module):
                         new_progs = self.construct_candidates(sub_prog.input_type, sub_prog.output_type, \
                                                             sub_prog.input_size, sub_prog.output_size, \
                                                             self.num_units_at_depth(depth))
+                        print('www', sub_prog, sub_prog.input_type, sub_prog.output_type, sub_prog.input_size, sub_prog.output_size, self.num_units_at_depth(depth), len(new_progs))
                         # if reach max depth, program should terminate
                         if depth == self.max_depth:
                             new_leaf_progs = [prog for prog in new_progs if len(prog.get_submodules()) == 0]
@@ -750,7 +754,7 @@ class ProgramGraph(nn.Module):
                         if len(sub_modules) == 0:
                             continue
                         # check NN and whether not exists
-                        invalids = [1 for subm in sub_modules.values() 
+                        invalids = [1 for subm in sub_modules.values()
                                 if issubclass(type(subm), dsl.HeuristicNeuralFunction) or subm.type_sign not in subm.to_node.prog_dict]
                         if len(invalids) > 0:
                             node.prog_dict[type_sign][prog_id] = None
@@ -1005,7 +1009,7 @@ class ProgramGraph(nn.Module):
             return flatten_tensor(out_unpadded).squeeze()
         else:
             if isinstance(out_unpadded, list):
-                out_unpadded = torch.cat(out_unpadded, dim=0).to(device)          
+                out_unpadded = torch.cat(out_unpadded, dim=0).to(device)
             return out_unpadded
 
 
@@ -1057,7 +1061,7 @@ class ProgramGraph(nn.Module):
             return None
         if depth == 0:
             return [self.root_node]
-        
+
         # search edges and get parameters
         nodes = []
         queue = [self.root_node]
@@ -1198,7 +1202,7 @@ class ProgramGraph(nn.Module):
                         next_node = edge.get_next_node()
                         if next_node not in frontiers:
                             frontiers.append(next_node)
-        
+
         return uncertain_cost
 
 
@@ -1331,5 +1335,5 @@ class ProgramGraph(nn.Module):
                         next_node = edge.get_next_node()
                         if next_node not in queue:
                             queue.append(next_node)
-        
+
         return cost

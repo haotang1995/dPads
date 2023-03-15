@@ -183,7 +183,7 @@ class NAS(ProgramLearningAlgorithm):
                 if cur_valid_id == len(validset):
                     cur_valid_id = 0
                     validset = search_loader.get_batch_validset()
-                
+
                 # not execute during warmup
                 if not warmup:
                     # take value
@@ -254,7 +254,7 @@ class NAS(ProgramLearningAlgorithm):
             # log
             log_and_print('architecture loss: {}'.format(np.mean(loss_store['arch_loss'])))
             log_and_print('model loss: {}'.format(np.mean(loss_store['model_loss'])))
-            
+
             # evaluate
             if valid:
                 with torch.no_grad():
@@ -340,7 +340,7 @@ class NAS(ProgramLearningAlgorithm):
             optim.step()
         if clear_temp:
             graph.clear_graph_results()
-        
+
         return loss
     ###########################################################################################################################
     ###########################################################################################################################
@@ -386,7 +386,7 @@ class NAS(ProgramLearningAlgorithm):
         self.forward_backward_check(unrolled_graph, lossfxn, None, \
                             batch_valid, valid_label, output_type, output_size, device,
                             clear_temp=True, cur_arch_train=False, clip=True, clip_params=model_params_list)
-        
+
         arch_grad = [param.grad.data.clone() for param in arch_params]
         model_grad = self.extract_model_grad(model_params)
 
@@ -425,7 +425,7 @@ class NAS(ProgramLearningAlgorithm):
 
 
     def extract_model_grad(self, model_params):
-        model_grad = [{param_key:param_dict[param_key].grad.data.clone() for param_key in param_dict} 
+        model_grad = [{param_key:param_dict[param_key].grad.data.clone() for param_key in param_dict}
                                                                          for param_dict in model_params]
         return model_grad
 
@@ -498,11 +498,11 @@ class NAS(ProgramLearningAlgorithm):
         return grad_final
     ###########################################################################################################################
     ###########################################################################################################################
-    
+
 
 
     # evaluate the model
-    def eval_graph(self, graph, test_set, eval_fun, num_labels, device):        
+    def eval_graph(self, graph, test_set, eval_fun, num_labels, device):
         output_type = graph.output_type
         output_size = graph.output_size
 
@@ -519,7 +519,8 @@ class NAS(ProgramLearningAlgorithm):
         # accuracy
         log_and_print("Validation score is: {:.4f}".format(metric))
         log_and_print("Average f1-score is: {:.4f}".format(1 - metric))
-        log_and_print("Hamming accuracy is: {:.4f}".format(additional_params['hamming_accuracy']))
+        if 'hamming_accuracy' in additional_params:
+            log_and_print("Hamming accuracy is: {:.4f}".format(additional_params['hamming_accuracy']))
 
         return metric
 
@@ -741,13 +742,13 @@ class NAS(ProgramLearningAlgorithm):
                     if len(non_complete) != 0:
                         complete = False
                         break
-                
+
                 if complete:
                     break
 
             cur_iter += 1
 
-                    
+
         # start time
         start = time.time()
         # get best one

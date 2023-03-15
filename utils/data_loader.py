@@ -42,13 +42,18 @@ def unpad_minibatch(minibatch, lengths, listtoatom=False):
 
 
 class CustomLoader:
-    def __init__(self, train_data, valid_data, test_data, train_labels, valid_labels, test_labels, \
-                       normalize=True, train_valid_split=0.7, batch_size=32, shuffle=True, by_label=False):
+    def __init__(
+        self,
+        train_data, valid_data, test_data,
+        train_labels, valid_labels, test_labels,
+        normalize=True, train_valid_split=0.7, batch_size=32,
+        shuffle=True, by_label=False
+    ):
         print('Shuffle? {}'.format(shuffle))
         self.shuffle = shuffle
         self.batch_size = batch_size
-        self.trainset, self.validset, self.testset = self.prepare_datasets(train_data, valid_data, test_data, 
-                                                                           train_labels, valid_labels, test_labels, 
+        self.trainset, self.validset, self.testset = self.prepare_datasets(train_data, valid_data, test_data,
+                                                                           train_labels, valid_labels, test_labels,
                                                                            normalize, train_valid_split, by_label)
         # if not shuffle, only random for the first time
         self.batched_trainset = self.create_minibatches(self.trainset, self.batch_size)
@@ -62,7 +67,7 @@ class CustomLoader:
             except:
                 train_data, valid_data, test_data = self.normalize_data_other(train_data, valid_data, test_data)
 
-        trainset = self.dataset_tolists(train_data, train_labels) 
+        trainset = self.dataset_tolists(train_data, train_labels)
         testset = self.dataset_tolists(test_data, test_labels)
 
         if valid_data is not None and valid_labels is not None:

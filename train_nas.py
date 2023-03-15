@@ -3,6 +3,7 @@ import os
 import pickle
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 import torch.optim as optim
 import numpy as np
 import random
@@ -13,7 +14,7 @@ from algorithms import NAS
 from eval_test import test_set_eval
 from program_graph import ProgramGraph
 from utils.data_loader import CustomLoader
-from utils.evaluation import label_correctness
+from utils.evaluation import label_correctness, neg_mse_loss
 from utils.logging import init_logging, log_and_print, print_program
 from utils.loss import SoftF1LossWithLogits
 
@@ -33,25 +34,25 @@ def parse_args():
     # Args for data
     parser.add_argument('--train_data', type=str, required=True,
                         help="path to train data")
-    parser.add_argument('--test_data', type=str, required=True, 
+    parser.add_argument('--test_data', type=str, required=True,
                         help="path to test data")
     parser.add_argument('--valid_data', type=str, required=False, default=None,
-                        help="path to val data. if this is not provided, we sample val from train.")    
+                        help="path to val data. if this is not provided, we sample val from train.")
     parser.add_argument('--train_labels', type=str, required=True,
                         help="path to train labels")
-    parser.add_argument('--test_labels', type=str, required=True, 
+    parser.add_argument('--test_labels', type=str, required=True,
                         help="path to test labels")
     parser.add_argument('--valid_labels', type=str, required=False, default=None,
-                        help="path to val labels. if this is not provided, we sample val from train.")     
+                        help="path to val labels. if this is not provided, we sample val from train.")
     parser.add_argument('--input_type', type=str, required=True, choices=["atom", "list"],
                         help="input type of data")
     parser.add_argument('--output_type', type=str, required=True, choices=["atom", "list"],
                         help="output type of data")
     parser.add_argument('--input_size', type=int, required=True,
                         help="dimenion of features of each frame")
-    parser.add_argument('--output_size', type=int, required=True, 
+    parser.add_argument('--output_size', type=int, required=True,
                         help="dimension of output of each frame (usually equal to num_labels")
-    parser.add_argument('--num_labels', type=int, required=True, 
+    parser.add_argument('--num_labels', type=int, required=True,
                         help="number of class labels")
 
     # Args for program graph
@@ -74,7 +75,7 @@ def parse_args():
                         " This is ignored if validation set is provided using valid_data and valid_labels.")
     parser.add_argument('--normalize', action='store_true', required=False, default=False,
                         help='whether or not to normalize the data')
-    parser.add_argument('--batch_size', type=int, required=False, default=50, 
+    parser.add_argument('--batch_size', type=int, required=False, default=50,
                         help="batch size for training set")
     parser.add_argument('-lr', '--learning_rate', type=float, required=False, default=0.02,
                         help="learning rate")
@@ -84,7 +85,7 @@ def parse_args():
                         help="training epochs for neural programs")
     parser.add_argument('--symbolic_epochs', type=int, required=False, default=6,
                         help="training epochs for symbolic programs")
-    parser.add_argument('--lossfxn', type=str, required=True, choices=["crossentropy", "bcelogits", "softf1"],
+    parser.add_argument('--lossfxn', type=str, required=True, choices=["crossentropy", "bcelogits", "softf1", 'mse',],
                         help="loss function for training")
     parser.add_argument('--f1double', action='store_true', required=False, default=False,
                         help='whether use double for soft f1 loss')
@@ -104,7 +105,7 @@ def parse_args():
                         help='Epoch for finetuning the result graph.')
 
     # Args for algorithms
-    parser.add_argument('--algorithm', type=str, required=True, 
+    parser.add_argument('--algorithm', type=str, required=True,
                         choices=["mc-sampling", "mcts", "enumeration", "genetic", "astar-near", "iddfs-near", "rnn", 'nas'],
                         help="the program learning algorithm to run")
     parser.add_argument('--frontier_capacity', type=int, required=False, default=float('inf'),
@@ -117,7 +118,7 @@ def parse_args():
                         help="depth bias for  IDDFS-NEAR (<1.0 prunes aggressively)")
     parser.add_argument('--exponent_bias', type=bool, required=False, default=False,
                         help="whether the depth_bias is an exponent for IDDFS-NEAR"+
-                        " (>1.0 prunes aggressively in this case)")    
+                        " (>1.0 prunes aggressively in this case)")
     parser.add_argument('--num_mc_samples', type=int, required=False, default=10,
                         help="number of MC samples before choosing a child")
     parser.add_argument('--max_num_programs', type=int, required=False, default=100,
@@ -136,7 +137,7 @@ def parse_args():
                         help="max enumeration depth for genetic algorithm")
     parser.add_argument('--cell_depth', type=int, required=False, default=3,
                         help="max depth for each cell for nas algorithm")
-    
+
     # Args for ablation setting
     parser.add_argument('--node_share', action='store_true', required=False, default=False,\
                         help='use node sharing is specific')
@@ -152,6 +153,8 @@ if __name__ == '__main__':
     if 'crim13' in args.exp_name:
         print('crim13 experiment')
         from dsl_crim13 import DSL_DICT, CUSTOM_EDGE_COSTS
+    elif 'arith' in args.exp_name:
+        from dsl_arith import DSL_DICT, CUSTOM_EDGE_COSTS
     elif 'basket' in args.exp_name:
         from dsl_basket import DSL_DICT, CUSTOM_EDGE_COSTS
     elif 'sk152' in args.exp_name:
@@ -228,6 +231,8 @@ if __name__ == '__main__':
             lossfxn = nn.BCEWithLogitsLoss()
         elif args.lossfxn == "softf1":
             lossfxn = SoftF1LossWithLogits(double=args.f1double)
+        elif args.lossfxn == 'mse':
+            lossfxn = nn.MSELoss()
     else:
         class_weights = torch.tensor([float(w) for w in args.class_weights.split(',')])
         if args.lossfxn == "crossentropy":
@@ -251,7 +256,7 @@ if __name__ == '__main__':
         train_config = {
             'node_share' : args.node_share,
             'arch_lr' : args.search_learning_rate,
-            'model_lr' : args.search_learning_rate, 
+            'model_lr' : args.search_learning_rate,
             'train_lr' : args.learning_rate,
             'search_epoches' : args.neural_epochs,
             'finetune_epoches' : args.symbolic_epochs,
@@ -277,7 +282,7 @@ if __name__ == '__main__':
         train_config = {
             'node_share' : args.node_share,
             'arch_lr' : args.search_learning_rate,
-            'model_lr' : args.search_learning_rate, 
+            'model_lr' : args.search_learning_rate,
             'train_lr' : args.learning_rate,
             'search_epoches' : args.neural_epochs,
             'finetune_epoches' : args.symbolic_epochs,
@@ -285,6 +290,32 @@ if __name__ == '__main__':
             'model_optim' : optim.Adam,
             'lossfxn' : lossfxn,
             'evalfxn' : label_correctness,
+            'num_labels' : args.num_labels,
+            'save_path' : save_path,
+            'topN' : args.topN_select,
+            'arch_weight_decay' : 0,
+            'model_weight_decay' : 0,
+            'secorder' : args.sec_order,
+            'penalty' : args.penalty,
+            'specific' : [[None, 2, 0.001, 8], [4, 2, 0.001, 3], [3, 2, 0.001, 3], [2, 2, 0.001, 3], \
+                    [None, 4, 0.001, 5], [4, 4, 0.001, 3], [3,4, 0.001, 3], [2, 4, 0.001, 0], ["astar", 4, 0.001, args.neural_epochs]]
+        }
+    elif 'arith' in args.exp_name:
+        specific = [[None, 2, 0.001, 8], [4, 2, 0.001, 3], [3, 2, 0.001, 3], [2, 2, 0.001, 3], \
+                    [None, 4, 0.001, 5], [4, 4, 0.001, 3], [3, 4, 0.001, 3], [2, 4, 0.001, 0], ["astar", 4, 0.001, args.neural_epochs]]
+        if not args.graph_unfold:
+            specific = [[None, 4, 0.001, 8], [4, 4, 0.001, 3], [3, 4, 0.001, 3], [2, 4, 0.001, 3], ["astar", 4, 0.001, args.neural_epochs]]
+        train_config = {
+            'node_share' : args.node_share,
+            'arch_lr' : args.search_learning_rate,
+            'model_lr' : args.search_learning_rate,
+            'train_lr' : args.learning_rate,
+            'search_epoches' : args.neural_epochs,
+            'finetune_epoches' : args.symbolic_epochs,
+            'arch_optim' : optim.Adam,
+            'model_optim' : optim.Adam,
+            'lossfxn' : lossfxn,
+            'evalfxn' : neg_mse_loss,
             'num_labels' : args.num_labels,
             'save_path' : save_path,
             'topN' : args.topN_select,
@@ -304,7 +335,7 @@ if __name__ == '__main__':
         train_config = {
             'node_share' : args.node_share,
             'arch_lr' : args.search_learning_rate,
-            'model_lr' : args.search_learning_rate, 
+            'model_lr' : args.search_learning_rate,
             'train_lr' : args.learning_rate,
             'search_epoches' : args.neural_epochs,
             'finetune_epoches' : args.symbolic_epochs,
@@ -331,7 +362,7 @@ if __name__ == '__main__':
         train_config = {
             'node_share' : args.node_share,
             'arch_lr' : args.search_learning_rate,
-            'model_lr' : args.search_learning_rate, 
+            'model_lr' : args.search_learning_rate,
             'train_lr' : args.learning_rate,
             'search_epoches' : args.neural_epochs,
             'finetune_epoches' : args.symbolic_epochs,
@@ -387,7 +418,7 @@ if __name__ == '__main__':
     log_and_print('Before finetune')
     test_set_eval(best_program, testset, args.output_type, args.output_size, args.num_labels, device)
     log_and_print("ALGORITHM END \n\n")
-    
+
     # Finetune
     if args.finetune_epoch is not None:
         if 'sk152' in args.exp_name:
