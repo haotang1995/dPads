@@ -80,3 +80,60 @@ class ImgMathZSelection(CNNFunction):
         self.full_feature_dim = IMGMATH_FULL_FEATURE_DIM
         self.feature_tensor, self.img_index = IMGMATH_FEATURE_SUBSETS['Z']
         super().__init__(input_size, output_size, num_units, name="Z")
+
+from .library_functions import AddFunction, SubFunction, MultiplyFunction
+from .neural_functions import HeuristicNeuralFunction, FeedForwardModule
+
+def imgmath_init_neural_function(input_type, output_type, input_size, output_size, num_units):
+    if input_type == "atom" and output_type == "atom":
+        return ImgMathAtomToAtomModule(input_size, output_size, num_units)
+    else:
+        raise ValueError(f"imgmath_init_neural_function: input_type={input_type}, output_type={output_type}, input_size={input_size}, output_size={output_size}, num_units={num_units}")
+    return None
+
+class ImgMathAtomToAtomModule(HeuristicNeuralFunction):
+
+    def __init__(self, input_size, output_size, num_units):
+        super().__init__("atom", "atom", input_size, output_size, num_units, "ImgMathAtomToAtomModule")
+
+    def init_model(self):
+        self.backbone = list(SHARED_CNN_LAYERS.values())[0]
+        self.model = FeedForwardModule(3, self.output_size, self.num_units).to(device)
+
+    def execute_on_batch(self, batch, batch_lens=None):
+        assert len(batch.size()) == 2
+        if batch.device !=  device:
+            model = self.model.to(batch.device)
+            backbone = self.backbone.to(batch.device)
+        else:
+            model = self.model
+            backbone = self.backbone
+        batch = batch.reshape(batch.size(0), 3, 32, 96)
+        feat = backbone(batch)
+        model_out = model(feat)
+        assert len(model_out.size()) == 2
+        return model_out
+
+class ImgMathAddFunction(AddFunction):
+    def __init__(self, input_size, output_size, num_units, function1=None, function2=None,):
+        if function1 is None:
+            function1 = imgmath_init_neural_function("atom", "atom", input_size, output_size, num_units)
+        if function2 is None:
+            function2 = imgmath_init_neural_function("atom", "atom", input_size, output_size, num_units)
+        super().__init__(input_size, output_size, num_units, function1=function1, function2=function2)
+
+class ImgMathSubFunction(SubFunction):
+    def __init__(self, input_size, output_size, num_units, function1=None, function2=None,):
+        if function1 is None:
+            function1 = imgmath_init_neural_function("atom", "atom", input_size, output_size, num_units)
+        if function2 is None:
+            function2 = imgmath_init_neural_function("atom", "atom", input_size, output_size, num_units)
+        super().__init__(input_size, output_size, num_units, function1=function1, function2=function2)
+
+class ImgMathMultiplyFunction(MultiplyFunction):
+    def __init__(self, input_size, output_size, num_units, function1=None, function2=None,):
+        if function1 is None:
+            function1 = imgmath_init_neural_function("atom", "atom", input_size, output_size, num_units)
+        if function2 is None:
+            function2 = imgmath_init_neural_function("atom", "atom", input_size, output_size, num_units)
+        super().__init__(input_size, output_size, num_units, function1=function1, function2=function2)
