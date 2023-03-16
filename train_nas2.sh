@@ -24,7 +24,7 @@ train_imgmath_first_order(){
     --symbolic_epochs 50 \
     --neural_epochs 50 \
     --cell_depth 2 \
-    --batch_size 200 \
+    --batch_size 256 \
     --penalty 0.01 \
     --finetune_epoch 50 \
     --finetune_lr 0.001 \

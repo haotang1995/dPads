@@ -154,7 +154,7 @@ def parse_args():
 
 def create_data(task_id=0,):
     from nsp.tasks.arith.base import ArithTask
-    task_config = {'task_num': 500, 'random_task_flag': False, 'dataset_size_str': 'normal', 'test_dataset_size': 1000, 'symbol_num': 3, 'image_dataset_name': 'cifar10', 'split_image_flag': True, 'norm10_flag': True}
+    task_config = {'task_num': 500, 'random_task_flag': False, 'dataset_size_str': 'normal', 'dataset_size':10000, 'test_dataset_size': 1000, 'symbol_num': 3, 'image_dataset_name': 'cifar10', 'split_image_flag': True, 'norm10_flag': True}
     task = ArithTask(**task_config)
     target_formula_list = task.get_target_formula_list()
     dataset = task.build_dataset(program_list=target_formula_list, train_flag=True, dry_run=dry_run,)
