@@ -27,7 +27,9 @@ class Edge(nn.Module):
         self.randset = randset
 
     def init_w(self, device):
-        weights = torch.zeros(len(self.to_node.prog_dict[self.type_sign]),
+        # @Mar 15, Hao, TESTING!!!
+        # weights = torch.zeros(len(self.to_node.prog_dict[self.type_sign]),
+        weights = torch.rand(len(self.to_node.prog_dict[self.type_sign]),
                         requires_grad = False,
                         dtype = torch.float,
                         device = device)

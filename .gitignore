@@ -2,4 +2,4 @@ data
 *__pycache*
 *.DS_Store*
 results
-tmp.txt
+*tmp*

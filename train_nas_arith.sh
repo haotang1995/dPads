@@ -28,7 +28,7 @@ train_arith_first_order(){
     --finetune_epoch 2000 \
     --finetune_lr 0.001 \
     --node_share \
-    --random_seed 1000 \
+    --random_seed 3000 \
     --max_num_units 1024 \
     --graph_unfold
     #--class_weights "1.0,1.5" \
