@@ -30,7 +30,7 @@ class HeuristicNeuralFunction:
         self.output_size = output_size
         self.num_units = num_units
         self.name = name
-        
+
         self.init_model()
 
     def init_model(self):
@@ -80,7 +80,11 @@ class AtomToAtomModule(HeuristicNeuralFunction):
 
     def execute_on_batch(self, batch, batch_lens=None):
         assert len(batch.size()) == 2
-        model_out = self.model(batch)
+        if batch.device !=  device:
+            model = self.model.to(batch.device)
+        else:
+            model = self.model
+        model_out = model(batch)
         assert len(model_out.size()) == 2
         return model_out
 
@@ -140,7 +144,6 @@ class FeedForwardModule(nn.Module):
 
     def forward(self, current_input):
         assert isinstance(current_input, torch.Tensor)
-        current_input = current_input.to(device)
         current = F.relu(self.first_layer(current_input))
         current = self.out_layer(current)
         return current

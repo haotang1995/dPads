@@ -22,7 +22,7 @@ import pdb
 
 import os, os.path as osp
 import wandb
-dry_run = True
+dry_run = False
 # no_wandb = False
 no_wandb = True
 
@@ -160,8 +160,13 @@ def create_data(task_id=0,):
     dataset = task.build_dataset(program_list=target_formula_list, train_flag=True, dry_run=dry_run,)
                                  # io_pairs_list=torch.tensor(list(itertools.product(list(range(10)), repeat=3)), dtype=torch.long,),)
     test_dataset = task.build_dataset(program_list=target_formula_list, train_flag=False, dry_run=dry_run,)
-    train_data, _, train_labels = dataset[:int(len(dataset)*.8)]
-    val_data, _, val_labels = dataset[int(len(dataset)*.8):]
+    # train_data, _, train_labels = dataset[:int(len(dataset)*.8)]
+    # val_data, _, val_labels = dataset[int(len(dataset)*.8):]
+    split = min(int(len(dataset)*.2), 300)
+    train_data, _, train_labels = dataset[:-split]
+    # TODO: Just for TESTING! @Hao
+    # train_data, _, train_labels = dataset[:1000]
+    val_data, _, val_labels = dataset[-split:]
     test_data, _, test_labels = test_dataset[:]
 
     train_data = train_data.reshape(train_data.shape[0], -1)
@@ -238,8 +243,10 @@ if __name__ == '__main__':
 
 
     # for model & architecture
+    _split = min(int(len(train_data)*(1-args.train_valid_split)), 300)
+    train_valid_split = 1-_split/len(train_data)
     search_loader = CustomLoader(train_data, None, test_data, train_labels, valid_labels, test_labels, \
-                                normalize=args.normalize, train_valid_split=args.train_valid_split, batch_size=args.batch_size, shuffle=False, \
+                                normalize=args.normalize, train_valid_split=train_valid_split, batch_size=args.batch_size, shuffle=False, \
                                 by_label=(args.output_type=='atom'))
     batched_trainset = search_loader.get_batch_trainset()
     batched_validset = search_loader.get_batch_validset()
@@ -251,7 +258,7 @@ if __name__ == '__main__':
 
     # for program train
     train_loader = CustomLoader(train_data, valid_data, test_data, train_labels, valid_labels, test_labels, \
-                                normalize=args.normalize, train_valid_split=args.train_valid_split, batch_size=args.batch_size, shuffle=False,\
+                                normalize=args.normalize, train_valid_split=train_valid_split, batch_size=args.batch_size, shuffle=False,\
                                 by_label=(args.output_type=='atom'))
     batched_prog_trainset = train_loader.get_batch_trainset()
     prog_validset = train_loader.get_batch_validset()
@@ -398,8 +405,8 @@ if __name__ == '__main__':
             'penalty' : args.penalty,
             # 'specific' : [[None, 2, 0.001, 20000], [4, 2, 0.001, 5000], [3, 2, 0.001, 5000], [2, 2, 0.001, 5000], \
                     # [None, 4, 0.001, 20000], [4, 4, 0.001, 5000], [3,4, 0.001, 5000], [2, 4, 0.001, 0], ["astar", 4, 0.001, args.neural_epochs]]
-            'specific' : [[None, 2, 0.001, 50], [4, 2, 0.001, 20], [3, 2, 0.001, 20], [2, 2, 0.001, 20], \
-                    [None, 4, 0.001, 50], [4, 4, 0.001, 20], [3,4, 0.001, 20], [2, 4, 0.001, 0], ["astar", 4, 0.001, args.neural_epochs]]
+            'specific' : [[None, 2, 0.001, 20], [4, 2, 0.001, 5], [3, 2, 0.001, 5], [2, 2, 0.001, 5], \
+                    [None, 4, 0.001, 20], [4, 4, 0.001, 5], [3,4, 0.001, 5], [2, 4, 0.001, 0], ["astar", 4, 0.001, args.neural_epochs]]
         }
     # sk152
     elif 'sk152' in args.exp_name:
@@ -499,7 +506,7 @@ if __name__ == '__main__':
         if 'sk152' in args.exp_name:
             # for program train
             train_loader = CustomLoader(train_data, valid_data, test_data, train_labels, valid_labels, test_labels, \
-                                        normalize=True, train_valid_split=args.train_valid_split, batch_size=args.batch_size, shuffle=False,\
+                                        normalize=True, train_valid_split=train_valid_split, batch_size=args.batch_size, shuffle=False,\
                                         by_label=(args.output_type=='atom'))
             testset = train_loader.testset
 

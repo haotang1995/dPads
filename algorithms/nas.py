@@ -119,11 +119,11 @@ class NAS(ProgramLearningAlgorithm):
 
             if best_model is None:
                 best_loss = metric
-                best_model = copy.deepcopy(graph)
+                # best_model = copy.deepcopy(graph)
                 best_epoch = epoch
             elif metric <= best_loss:
                 best_loss = metric
-                best_model = copy.deepcopy(graph)
+                # best_model = copy.deepcopy(graph)
                 best_epoch = epoch
                 early_stop_cnt = 0
             else:
@@ -134,7 +134,8 @@ class NAS(ProgramLearningAlgorithm):
         log_and_print('finish train\n')
         log_and_print('best epoch: {}'.format(best_epoch))
 
-        return best_model
+        # return best_model
+        return graph
 
 
     # train the model
@@ -190,6 +191,7 @@ class NAS(ProgramLearningAlgorithm):
 
             # get new train set
             trainset = search_loader.get_batch_trainset()
+            # input(f"Document GPU Memory after trainset :")
 
             # train and search
             for batchidx in tqdm(range(len(trainset))):
@@ -271,6 +273,8 @@ class NAS(ProgramLearningAlgorithm):
                 # store
                 loss_store['model_loss'].append(loss.cpu().data.item())
 
+            # input(f"Document GPU Memory after train & search:")
+
             # log
             if epoch % max(num_epoches//10, 1) == 0:
                 log_and_print('architecture loss: {}'.format(np.mean(loss_store['arch_loss'])))
@@ -285,15 +289,20 @@ class NAS(ProgramLearningAlgorithm):
                         log_and_print('metric: {}'.format(metric))
                     if metric < best_metric:
                         best_metric = metric
-                        best_graph = copy.deepcopy(graph)
+                        # cpu_graph = graph.cpu()
+                        # best_graph = copy.deepcopy(cpu_graph)
+                        # del cpu_graph
                         early_stop_cnt = 0
                     else:
                         early_stop_cnt += 1
                         if early_stop_cnt >= EARLY_STOP_TOLERANCE:
                             break;
 
+                    # input(f"Document GPU Memory after eval, {metric <= best_metric}:")
+
         if get_best:
-            return best_graph
+            # return best_graph
+            return graph
         else:
             return True
 
@@ -538,12 +547,13 @@ class NAS(ProgramLearningAlgorithm):
     def eval_graph(self, graph, test_set, eval_fun, num_labels, device):
         output_type = graph.output_type
         output_size = graph.output_size
-        original_device, device = device, torch.device('cpu')
+        # original_device, device = device, torch.device('cpu')
 
         # prepare test data
         test_input, test_output = map(list, zip(*test_set))
         test_true_vals = torch.tensor(flatten_batch(test_output)).float().to(device)
         test_true_vals = test_true_vals
+
         # evaluation
         with torch.no_grad():
             # pass through graph

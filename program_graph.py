@@ -205,10 +205,14 @@ class Edge(nn.Module):
             # plus weight
             global arch_search
             rand_prob = random.uniform(0, 1)
-            if arch_search or rand_prob > self.randset:
-                Ws = self.softmax(self.W[self.W_id==1])
+            if batch.device != self.device:
+                W, W_id = self.W.to(batch.device), self.W_id.to(batch.device)
             else:
-                Ws = self.softmax(torch.ones_like(self.W)[self.W_id==1])
+                W, W_id = self.W, self.W_id
+            if arch_search or rand_prob > self.randset:
+                Ws = self.softmax(W[W_id==1])
+            else:
+                Ws = self.softmax(torch.ones_like(W)[W_id==1])
 
             for shape_id in range(len(results.shape)-1):
                 Ws = Ws.unsqueeze(-1)

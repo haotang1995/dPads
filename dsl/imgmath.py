@@ -49,7 +49,11 @@ class CNNFunction(LibraryFunction):
         assert len(batch.size()) == 2
         batch = batch.reshape(batch.size(0), 3, 32, 96)
         batch = batch[:, :, :, 32*self.img_index:32*(self.img_index+1)]
-        return self.cnn_layer(batch)
+        if batch.device != device:
+            cnn_layer = self.cnn_layer.to(batch.device)
+        else:
+            cnn_layer = self.cnn_layer
+        return cnn_layer(batch)
 
 IMGMATH_FEATURE_SUBSETS = {
     'X': (torch.arange(32*32*3), 0),
