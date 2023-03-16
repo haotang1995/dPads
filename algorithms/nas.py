@@ -350,8 +350,6 @@ class NAS(ProgramLearningAlgorithm):
                     optim.zero_grad()
 
             predicted_data = graph.execute_graph(batch_data, output_type, output_size, device, clear_temp=False, cur_arch_train=cur_arch_train)
-            print('hhh', predicted_data, label_data)
-            assert(False)
             loss = lossfxn(predicted_data, label_data)
             if ratio is not None:
                 loss = ratio * loss
@@ -730,7 +728,10 @@ class NAS(ProgramLearningAlgorithm):
                 for node in frontier:
                     graph.build_next_cell(node, cell_depth, device, node_share=train_config['node_share'])
                 if target_depth == max_depth:
-                    graph.clean_candidate()
+                    try:
+                        graph.clean_candidate()
+                    except AssertionError as err:
+                        log_and_print(err)
                 # if warmup
                 if warmup:
                     log_and_print('>warm up...')

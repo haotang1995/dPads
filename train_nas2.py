@@ -20,6 +20,11 @@ from utils.loss import SoftF1LossWithLogits
 
 import pdb
 
+import os, os.path as osp
+import wandb
+dry_run = True
+# no_wandb = False
+no_wandb = True
 
 def parse_args():
     parser = argparse.ArgumentParser()
@@ -148,7 +153,6 @@ def parse_args():
     return parser.parse_args()
 
 def create_data(task_id=0,):
-    dry_run = False
     from nsp.tasks.arith.base import ArithTask
     task_config = {'task_num': 500, 'random_task_flag': False, 'dataset_size_str': 'normal', 'test_dataset_size': 1000, 'symbol_num': 3, 'image_dataset_name': 'cifar10', 'split_image_flag': True, 'norm10_flag': True}
     task = ArithTask(**task_config)
@@ -178,6 +182,12 @@ def create_data(task_id=0,):
 if __name__ == '__main__':
     args = parse_args()
     print(args)
+
+    if not no_wandb:
+        wandb.init(project="arith.dpads", entity="htang383", config=dict(args.__dict__,))
+        checkpoints_path = osp.join(wandb.run.dir, 'checkpoints')
+        if not osp.exists(checkpoints_path):
+            os.mkdir(checkpoints_path)
 
     if 'crim13' in args.exp_name:
         print('crim13 experiment')
