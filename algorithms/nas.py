@@ -192,8 +192,8 @@ class NAS(ProgramLearningAlgorithm):
             trainset = search_loader.get_batch_trainset()
 
             # train and search
-            # for batchidx in tqdm(range(len(trainset))):
-            for batchidx in (range(len(trainset))):
+            for batchidx in tqdm(range(len(trainset))):
+            # for batchidx in (range(len(trainset))):
                 #########################################
                 # update architecture parameters first  #
                 #########################################

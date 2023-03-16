@@ -495,7 +495,6 @@ class ProgramGraph(nn.Module):
                         if 'shared' in key:
                             if key not in visited_shared_keys:
                                 model_params.append({'params' : param})
-                                print('lalala', key, param)
                                 visited_shared_keys.append(key)
                         else:
                             model_params.append({'params' : param})

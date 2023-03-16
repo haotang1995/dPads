@@ -13,7 +13,7 @@ class SqueezeList(LibraryFunction):
         return batch[:,0,:] # squeeze
 
 SHARED_CNN_LAYERS = {
-    (3072, 1,): ResDigitNet18(symbol_num=3, input_image_size=(3, 32, 96), split_image_flag=True, relu_after_fc1_flag=True,)
+    (3072, 1,): ResDigitNet18(symbol_num=3, input_image_size=(3, 32, 96), split_image_flag=True, relu_after_fc1_flag=False,).to(device),
 }
 
 class CNNFunction(LibraryFunction):
@@ -42,7 +42,7 @@ class CNNFunction(LibraryFunction):
         self.selected_input_size = self.feature_tensor.size()[-1] + additional_inputs
         self.cnn_layer = SHARED_CNN_LAYERS[(self.selected_input_size, self.output_size,)]
         self.parameters = {
-            f"shared_param{pi}_{self.selected_input_size}_{self.output_size}" : p,
+            f"shared_param{pi}_{self.selected_input_size}_{self.output_size}" : p
             for pi, p in enumerate(self.cnn_layer.parameters())
         }
     def execute_on_batch(self, batch, batch_lens=None):
@@ -59,20 +59,20 @@ IMGMATH_FEATURE_SUBSETS = {
 IMGMATH_FULL_FEATURE_DIM = 32*32*3*3
 
 
-class ArithXSelection(FeatureSelectionFunction):
+class ImgMathXSelection(CNNFunction):
     def __init__(self, input_size, output_size, num_units):
-        self.full_feature_dim = ARITH_FULL_FEATURE_DIM
-        self.feature_tensor, self.img_index = ARITH_FEATURE_SUBSETS['X']
+        self.full_feature_dim = IMGMATH_FULL_FEATURE_DIM
+        self.feature_tensor, self.img_index = IMGMATH_FEATURE_SUBSETS['X']
         super().__init__(input_size, output_size, num_units, name="X")
 
-class ArithYSelection(FeatureSelectionFunction):
+class ImgMathYSelection(CNNFunction):
     def __init__(self, input_size, output_size, num_units):
-        self.full_feature_dim = ARITH_FULL_FEATURE_DIM
-        self.feature_tensor, self.img_index = ARITH_FEATURE_SUBSETS['Y']
+        self.full_feature_dim = IMGMATH_FULL_FEATURE_DIM
+        self.feature_tensor, self.img_index = IMGMATH_FEATURE_SUBSETS['Y']
         super().__init__(input_size, output_size, num_units, name="Y")
 
-class ArithZSelection(FeatureSelectionFunction):
+class ImgMathZSelection(CNNFunction):
     def __init__(self, input_size, output_size, num_units):
-        self.full_feature_dim = ARITH_FULL_FEATURE_DIM
-        self.feature_tensor, self.img_index = ARITH_FEATURE_SUBSETS['Z']
+        self.full_feature_dim = IMGMATH_FULL_FEATURE_DIM
+        self.feature_tensor, self.img_index = IMGMATH_FEATURE_SUBSETS['Z']
         super().__init__(input_size, output_size, num_units, name="Z")

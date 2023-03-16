@@ -1,5 +1,5 @@
 train_imgmath_first_order(){
-    CUDA_VISIBLE_DEVICES=$1 python3 train_nas.py \
+    CUDA_VISIBLE_DEVICES=$1 python3 train_nas2.py \
     --algorithm nas \
     --exp_name imgmath_spec_seed4000 \
     --trial 1 \
@@ -14,6 +14,7 @@ train_imgmath_first_order(){
     --input_size 9216 \
     --output_size 1 \
     --num_labels 1 \
+    --task_id $2 \
     --lossfxn "mse" \
     --max_depth 4 \
     --frontier_capacity 8 \

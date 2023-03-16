@@ -16,3 +16,4 @@ from .basketball import BBallBallSelection, BBallOffenseSelection, BBallDefenseS
 from .sk152 import ArmSelection, LegSelection, FaceSelection
 
 from .arith import SqueezeList, ArithXSelection, ArithYSelection, ArithZSelection
+from .imgmath import SqueezeList, ImgMathXSelection, ImgMathYSelection, ImgMathZSelection

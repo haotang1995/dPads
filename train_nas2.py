@@ -54,6 +54,7 @@ def parse_args():
                         help="dimension of output of each frame (usually equal to num_labels")
     parser.add_argument('--num_labels', type=int, required=True,
                         help="number of class labels")
+    parser.add_argument('--task_id', type=int, required=True,)
 
     # Args for program graph
     parser.add_argument('--max_num_units', type=int, required=False, default=16,
@@ -146,6 +147,33 @@ def parse_args():
 
     return parser.parse_args()
 
+def create_data(task_id=0,):
+    dry_run = False
+    from nsp.tasks.arith.base import ArithTask
+    task_config = {'task_num': 500, 'random_task_flag': False, 'dataset_size_str': 'normal', 'test_dataset_size': 1000, 'symbol_num': 3, 'image_dataset_name': 'cifar10', 'split_image_flag': True, 'norm10_flag': True}
+    task = ArithTask(**task_config)
+    target_formula_list = task.get_target_formula_list()
+    dataset = task.build_dataset(program_list=target_formula_list, train_flag=True, dry_run=dry_run,)
+                                 # io_pairs_list=torch.tensor(list(itertools.product(list(range(10)), repeat=3)), dtype=torch.long,),)
+    test_dataset = task.build_dataset(program_list=target_formula_list, train_flag=False, dry_run=dry_run,)
+    train_data, _, train_labels = dataset[:int(len(dataset)*.8)]
+    val_data, _, val_labels = dataset[int(len(dataset)*.8):]
+    test_data, _, test_labels = test_dataset[:]
+
+    train_data = train_data.reshape(train_data.shape[0], -1)
+    val_data = val_data.reshape(val_data.shape[0], -1)
+    test_data = test_data.reshape(test_data.shape[0], -1)
+
+    train_labels = train_labels[:, task_id:task_id+1]
+    val_labels = val_labels[:, task_id:task_id+1]
+    test_labels = test_labels[:, task_id:task_id+1]
+
+    train_data, val_data, test_data = train_data.unsqueeze(1), val_data.unsqueeze(1), test_data.unsqueeze(1)
+    train_labels, val_labels, test_labels = train_labels.unsqueeze(1), val_labels.unsqueeze(1), test_labels.unsqueeze(1)
+
+    train_data, val_data, test_data = train_data.numpy(), val_data.numpy(), test_data.numpy()
+    train_labels, val_labels, test_labels = train_labels.numpy(), val_labels.numpy(), test_labels.numpy()
+    return train_data, val_data, test_data, train_labels, val_labels, test_labels
 
 if __name__ == '__main__':
     args = parse_args()
@@ -184,18 +212,20 @@ if __name__ == '__main__':
     init_logging(save_path)
     log_and_print("Starting experiment {}\n".format(full_exp_name))
 
-    train_data = np.load(args.train_data, allow_pickle=True)
-    print('wwwww')
-    test_data = np.load(args.test_data, allow_pickle=True)
-    valid_data = None
-    train_labels = np.load(args.train_labels)
-    test_labels = np.load(args.test_labels)
-    valid_labels = None
+    # train_data = np.load(args.train_data, allow_pickle=True)
+    # test_data = np.load(args.test_data, allow_pickle=True)
+    # valid_data = None
+    # train_labels = np.load(args.train_labels)
+    # test_labels = np.load(args.test_labels)
+    # valid_labels = None
+    # if args.valid_data is not None and args.valid_labels is not None:
+        # valid_data = np.load(args.valid_data, allow_pickle=True)
+        # valid_labels = np.load(args.valid_labels)
     # assert train_data.shape[-1] == test_data.shape[-1] == args.input_size
 
-    if args.valid_data is not None and args.valid_labels is not None:
-        valid_data = np.load(args.valid_data, allow_pickle=True)
-        valid_labels = np.load(args.valid_labels)
+    train_data, valid_data, test_data, train_labels, valid_labels, test_labels = create_data(args.task_id)
+    print("Finish data loading")
+
 
     # for model & architecture
     search_loader = CustomLoader(train_data, None, test_data, train_labels, valid_labels, test_labels, \
@@ -203,6 +233,7 @@ if __name__ == '__main__':
                                 by_label=(args.output_type=='atom'))
     batched_trainset = search_loader.get_batch_trainset()
     batched_validset = search_loader.get_batch_validset()
+    print("Finish batched data loading")
 
     log_and_print('data for architecture search')
     log_and_print('batch num of train: {}'.format(len(batched_trainset)))
