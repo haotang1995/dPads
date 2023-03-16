@@ -538,6 +538,7 @@ class NAS(ProgramLearningAlgorithm):
     def eval_graph(self, graph, test_set, eval_fun, num_labels, device):
         output_type = graph.output_type
         output_size = graph.output_size
+        original_device, device = device, torch.device('cpu')
 
         # prepare test data
         test_input, test_output = map(list, zip(*test_set))
