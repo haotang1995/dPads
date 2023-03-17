@@ -187,7 +187,7 @@ class NAS(ProgramLearningAlgorithm):
             loss_store = {'arch_loss':[], 'model_loss':[], 'valid_loss':[]}
 
             # store graph for debug
-            pickle.dump(graph, open(os.path.join(train_config['save_path'], "graph_temp.p"), "wb"))
+            # pickle.dump(graph, open(os.path.join(train_config['save_path'], "graph_temp.p"), "wb"))
 
             # get new train set
             trainset = search_loader.get_batch_trainset()
@@ -766,7 +766,8 @@ class NAS(ProgramLearningAlgorithm):
             self.eval_graph(graph, testset, train_config['evalfxn'], train_config['num_labels'], device)
 
             # store intermediate graph
-            pickle.dump(graph, open(os.path.join(train_config['save_path'], "graph_depth{}_iter{}.p".format(target_depth, cur_iter)), "wb"))
+            # pickle.dump(graph, open(os.path.join(train_config['save_path'], "graph_depth{}_iter{}.p".format(target_depth, cur_iter)), "wb"))
+
             graph.show_graph()
             log_and_print('\n\n')
 
