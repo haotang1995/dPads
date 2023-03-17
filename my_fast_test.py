@@ -170,7 +170,8 @@ def main():
     for dn in dn_list:
         if 'imgmath' not in dn:
             continue
-        eval_graph(osp.join(results_dir, dn), data_loader, test_data)
+        with torch.no_grad():
+            eval_graph(osp.join(results_dir, dn), data_loader, test_data)
 
 if __name__ == '__main__':
     main()

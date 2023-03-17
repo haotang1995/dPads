@@ -7,9 +7,9 @@ import numpy as np
 
 def main(fast_flag=False,):
     results_dir = osp.join(osp.dirname(osp.abspath(__file__)), 'results')
-    dn_list = [dn for dn in os.listdir(results_dir) if osp.isdir(osp.join(results_dir, dn)) and osp.exists(osp.join(results_dir, dn, 'eval_results.json'))]
-    results = [[] for _ in range(500)]
     basename = 'eval_results.json' if not fast_flag else 'fast_eval_results.json'
+    dn_list = [dn for dn in os.listdir(results_dir) if osp.isdir(osp.join(results_dir, dn)) and osp.exists(osp.join(results_dir, dn, basename))]
+    results = [[] for _ in range(500)]
     for dn in dn_list:
         with open(osp.join(results_dir, dn, basename)) as f:
             result = json.load(f)
@@ -27,8 +27,9 @@ def main(fast_flag=False,):
     print()
 
     print('Evaluated on %d tasks' % len([result for result in results if len(result) > 0]))
-    for key in results[0][0].keys():
-        if isinstance(results[0][0][key], str):
+    first_result = [result for result in results if len(result) > 0][0]
+    for key in first_result[0].keys():
+        if isinstance(first_result[0][key], str):
             continue
         print('%s: %.4f' % (key, np.mean([np.max([r[key] for r in result]) for result in results if len(result) > 0])))
 
