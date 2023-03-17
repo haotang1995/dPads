@@ -11,6 +11,11 @@ from program_graph import Edge
 from utils.logging import print_program
 from nsp.tasks.arith.base import ArithTask
 
+if torch.cuda.is_available():
+    device = torch.device('cuda:0')
+else:
+    device = torch.device('cpu')
+
 def get_symbol_grounder(graph):
     root_node = graph.root_node
     queue = [root_node]
@@ -103,7 +108,7 @@ def eval_graph(path, train_data_loader, test_data,):
 
     with open(osp.join(path, 'graph.p'), 'rb') as f:
         graph = pkl.load(f)
-    grounder = get_symbol_grounder(graph)
+    grounder = get_symbol_grounder(graph).to(device)
     program = print_program(graph.extract_program())
     print(dn, program, task_id)
 
@@ -111,9 +116,11 @@ def eval_graph(path, train_data_loader, test_data,):
     for epoch in range(20):
         for step, (x, s, y) in tqdm(enumerate(train_data_loader)):
             optim.zero_grad()
+            y = y[..., task_id:task_id+1]
+            x, s, y = x.to(device), s.to(device), y.to(device)
+
             pred_s = grounder(x)
             pred = run_program(program, pred_s)
-            y = y[..., task_id:task_id+1]
             assert(pred.squeeze().shape == y.squeeze().shape)
             loss = F.mse_loss(pred.squeeze(), y.squeeze())
             loss.backward()
@@ -127,6 +134,7 @@ def eval_graph(path, train_data_loader, test_data,):
         print('Task {}, Step {}, Loss: {}, Symbol Acc: {}, Program Acc: {}'.format(task_id, step, loss.item(), sym_acc, prog_acc))
 
     test_x, test_s, test_y = test_data
+    test_x, test_s, test_y = test_x.to(device), test_s.to(device), test_y.to(device)
     test_y = test_y[..., task_id:task_id+1]
 
     test_pred_s = grounder(test_x)
