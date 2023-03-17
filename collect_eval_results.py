@@ -5,12 +5,13 @@ import os, os.path as osp
 import json
 import numpy as np
 
-def main():
+def main(fast_flag=False,):
     results_dir = osp.join(osp.dirname(osp.abspath(__file__)), 'results')
     dn_list = [dn for dn in os.listdir(results_dir) if osp.isdir(osp.join(results_dir, dn)) and osp.exists(osp.join(results_dir, dn, 'eval_results.json'))]
     results = [[] for _ in range(500)]
+    basename = 'eval_results.json' if not fast_flag else 'fast_eval_results.json'
     for dn in dn_list:
-        with open(osp.join(results_dir, dn, 'eval_results.json')) as f:
+        with open(osp.join(results_dir, dn, basename)) as f:
             result = json.load(f)
         if 'task' not in dn:
             task_id = 0
@@ -22,10 +23,16 @@ def main():
     for i, result in enumerate(results):
         if len(result) == 0:
             continue
-        print('task %d' % i)
-        for key in result[0].keys():
-            print('%s: %.4f' % (key, np.mean([r[key] for r in result if not isinstance(r[key], str)])))
+        print('Task {}: {}'.format(i, ', '.join(['%s: %.4f' % (key, np.max([r[key] for r in result])) for key in result[0].keys() if not isinstance(result[0][key], str)])))
+    print()
+
+    print('Evaluated on %d tasks' % len([result for result in results if len(result) > 0]))
+    for key in results[0][0].keys():
+        if isinstance(results[0][0][key], str):
+            continue
+        print('%s: %.4f' % (key, np.mean([np.max([r[key] for r in result]) for result in results if len(result) > 0])))
 
 if __name__ == '__main__':
-    main()
+    # main(fast_flag=False,)
+    main(fast_flag=True,)
 
