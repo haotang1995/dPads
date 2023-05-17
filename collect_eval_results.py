@@ -12,7 +12,11 @@ def main(fast_flag=False,):
     results = [[] for _ in range(500)]
     for dn in dn_list:
         with open(osp.join(results_dir, dn, basename)) as f:
-            result = json.load(f)
+            try:
+                result = json.load(f)
+            except Exception as err:
+                print(dn, basename, err)
+                raise err
         if 'task' not in dn:
             task_id = 0
         else:
@@ -32,8 +36,9 @@ def main(fast_flag=False,):
         if isinstance(first_result[0][key], str):
             continue
         print('%s: %.4f' % (key, np.mean([np.max([r[key] for r in result]) for result in results if len(result) > 0])))
+    print('Missing results: ', [ri for ri, result in enumerate(results) if len(result) == 0])
 
 if __name__ == '__main__':
-    # main(fast_flag=False,)
-    main(fast_flag=True,)
+    main(fast_flag=False,)
+    # main(fast_flag=True,)
 
